@@ -143,7 +143,7 @@ public class CommManager : MonoBehaviour
 
     void DecodeMessage(string msg)
     {
-        curThrottle = FromByte2Float(msg.Substring(1, 4));
+        curThrottle = FromByte2Float(msg.Substring(2, 4));
     }
 
     string FromFloat2Byte(float num)
@@ -165,6 +165,7 @@ public class CommManager : MonoBehaviour
     void SendCurState()
     {
         string msg = "$";
+        msg += (char)16;
         msg += FromFloat2Byte(curSpeed);
         msg += FromFloat2Byte(curDist);
         msg += '^';
