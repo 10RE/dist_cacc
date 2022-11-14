@@ -5,21 +5,20 @@
 *  0: speed data
 *  1: distance data
 */
-float vehicle_data[2] = {0, 0};
-String recieve_buff = "";
+float vehicle_data[2] = {0, 1.1};
+char recieve_buff[128];
 
-String floatToString (float value) {
-    String ret = "";
+void floatToString (char* buff, float value) {
     int32_t local_value;
-    memcpy(&local_value, &value, 8);
+    memcpy(&local_value, &value, 4);
     for (int i = 0; i < 4; i++) {
-        ret += (char) (local_value & 0xFF);
-        local_value >>= 8;
+        buff[i] = (char) (local_value & 0xFF);
+        //Serial.print(buff[i]);
+        local_value = local_value >> 8;
     }
-    return ret;
 }
 
-float stringToFloat (String s) {
+float stringToFloat (char* s) {
     char buff[4];
     for (int i = 0; i < 4; i ++) {
       buff[i] = s[i];
@@ -28,34 +27,58 @@ float stringToFloat (String s) {
     return ret;
 }
 
-String formCommand(float data) {
-    String command = "$";
-    command += (char) (4); // data length in char
-    command += floatToString(data);
-    command += "^";
-    return command;
-}
-
-void sendCommand(String command) {
-    Serial.println(command);
+void sendCommand(float data) {
+    char buff[4];
+    char command[7];
+    command[0] = '$';
+    command[1] = (char) (4); // data length in char
+    floatToString(&buff[0], data);
+    command[2] = buff[0];
+    Serial.print(command[2]);
+    command[3] = buff[1];
+    command[4] = buff[2];
+    command[5] = buff[3];
+    command[6] = '^';
+    Serial.print(command);
+    //decodeCommand(&command[0], 7);
     Serial.flush();
 }
 
-void decodeCommand(String command) {
+void sendRaw() {
+  Serial.print(recieve_buff);
+  Serial.flush();
+}
+
+void decodeCommand(char* command, int len) {
     if (command[0] != SOP) {
+      Serial.println("SOP!");
       return;
     }
     uint8_t length = (uint8_t) command[1];
-    if (command.length() < (length + 3)) {
+    // if (len != (length + 3)) {
+    //   Serial.println("#");
+    //   Serial.println(len);
+    //   Serial.println(length);
+    //   Serial.println("length!");
+    //   return;
+    // }
+    //for (int i = 0; i < len; i ++) {
+    //  Serial.print(recieve_buff[i]);
+    //}
+    if (command[10] != EOP) {
+      // Serial.print("#");
+      // Serial.print(len);
+      // for (int i = 0; i < len; i ++) {
+      //   Serial.print(command[i]);
+      // }
+      Serial.print("EOP");
       return;
     }
-    if (command[length + 2] != EOP) {
-      return;
-    }
-    vehicle_data[0] = stringToFloat(command.substring(2, 6));
-    vehicle_data[1] = stringToFloat(command.substring(6, 10));
-    Serial.println(vehicle_data[0]);
-    Serial.println(vehicle_data[1]);
+    
+    vehicle_data[0] = stringToFloat(&command[2]);
+    vehicle_data[1] = stringToFloat(&command[6]);
+    //Serial.println(vehicle_data[0]);
+    //Serial.print(vehicle_data[1]);
 }
 
 void setup() {
@@ -63,20 +86,25 @@ void setup() {
 }
 
 void loop() {
+    int id = 0;
+    if (Serial.available() > 0) {
+      char c = Serial.read();
+      if (c == '$') {
+          recieve_buff[0] = c;
+          id ++;
+          while (id < 11) {
+            if (Serial.available() > 0) {
+              c = Serial.read();
+              recieve_buff[id] = c;
+              id ++;
+            }
+          }
+          Serial.print(id);
+          decodeCommand(&recieve_buff[0], id);
+      }
+    } 
 
-    while (Serial.available()) {
-        if (Serial.available() > 0) {
-          char c = Serial.read();  //gets one byte from serial buffer
-          recieve_buff += c; //makes the string readString
-        } 
-    }
-    if (recieve_buff.length() > 0) {
-        decodeCommand(recieve_buff);
-        recieve_buff = "";
-    }
-
-    String command = formCommand(0.8);
-    sendCommand(command);
+    sendCommand(vehicle_data[1]);
     
-    delay(1000);
+    delay(100);
 }

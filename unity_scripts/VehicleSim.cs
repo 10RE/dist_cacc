@@ -21,6 +21,8 @@ public class VehicleSim : MonoBehaviour
 
     private Queue<float> throttleQueue = new Queue<float>();
 
+    public GameObject vehicleAhead;
+
     float updateThrottle(float t)
     {
         if (t < 0)
@@ -47,7 +49,7 @@ public class VehicleSim : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //throttle = comm.GetThrottle();
+        throttle = comm.GetThrottle();
         if (Time.time > prevTime + updatePeriod)
         {
             curThrottle = updateThrottle(throttle);
@@ -63,10 +65,8 @@ public class VehicleSim : MonoBehaviour
         transform.Translate(Vector3.forward * Time.deltaTime * curSpeed);
         if (Time.time > prevTime + updatePeriod)
         {
-            /*
-             * Modify the second parameter for distance
-             */
-            comm.SetCurState(curSpeed, 10);
+            float curDist = vehicleAhead.transform.position.z - transform.position.z;
+            comm.SetCurState(curSpeed, curDist);
         }
     }
 }
