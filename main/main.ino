@@ -1,4 +1,5 @@
 #include "unity_serial.h"
+#include "net_serial.h"
 
 #define INITIAL_DISTANCE 1
 
@@ -7,7 +8,8 @@ float computeIdealDistance(float speed) {
   return 1;
 }
 
-int self_id;
+int self_id = 0;
+bool self_identified = false;
 
 float identify_self(int prev_vehicle_id) {
   if (prev_vehicle_id == 0) {
@@ -22,6 +24,8 @@ float identify_self(int prev_vehicle_id) {
 
 float throttle;
 
+float leading_speed, leading_throttle;
+
 float actualDistance, idealDistance;
 float prevActualDistance, prevIdealDistance;
 
@@ -32,6 +36,7 @@ int Kd = 1;
 float p, i, d;  // proportional, integral, derivative
 
 USerial unity_serial(115200);
+NSerial net_serial(115200);
 
 void setup() {
 
@@ -41,9 +46,17 @@ void setup() {
   d = 0;
   prevActualDistance = INITIAL_DISTANCE;
   prevIdealDistance = INITIAL_DISTANCE;
+
 }
 
 void loop() {
+
+  if (self_id == 0) {
+    net_serial.broadcastStates(unity_serial.getVehicleData(0), throttle);
+  }
+  else {
+    net_serial.receive(leading_speed, leading_throttle);
+  }
 
   unity_serial.readCommand();
 
