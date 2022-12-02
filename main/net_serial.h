@@ -9,15 +9,15 @@
 #define TIMEOUT 500 // mS
 #define EN 12
 
+typedef union {
+    float f;
+    char c[sizeof(float)];
+} data_t;
+
 class NSerial
 {
 public:
     SoftwareSerial mySerial; // RX, TX
-
-    typedef union {
-        float f;
-        char c[sizeof(float)];
-    } data_t;
 
     NSerial(int baudrate);
 
