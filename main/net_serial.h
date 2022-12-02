@@ -21,6 +21,8 @@ public:
 
     NSerial(int baudrate);
 
+    void init(int baudrate);
+
     void nPinInit();
 
     void wifiInit();

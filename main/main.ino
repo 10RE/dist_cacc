@@ -2,10 +2,11 @@
 #include "net_serial.h"
 
 #define INITIAL_DISTANCE 1
+#define LEADING_THROTTLE 20
 
 // PID control
 float computeIdealDistance(float speed) {
-  return 1;
+  return 1+0.1*speed;
 }
 
 int self_id = 0;
@@ -38,15 +39,16 @@ float p, i, d;  // proportional, integral, derivative
 USerial unity_serial(115200);
 NSerial net_serial(115200);
 
-void setup() {
 
+void setup() {
+  net_serial.init(115200);
+  unity_serial.init(115200);
   // initialize PID
   p = 0;
   i = 0;
   d = 0;
   prevActualDistance = INITIAL_DISTANCE;
   prevIdealDistance = INITIAL_DISTANCE;
-
 }
 
 void loop() {
@@ -61,7 +63,7 @@ void loop() {
   unity_serial.readCommand();
 
   actualDistance = unity_serial.getVehicleData(1);
-  idealDistance = computeIdealDistance(unity_serial.getVehicleData(0));
+  idealDistance = computeIdealDistance(leading_speed);
 
   p = actualDistance - idealDistance;
   i += p;
@@ -70,7 +72,7 @@ void loop() {
   prevActualDistance = actualDistance;
   prevIdealDistance = idealDistance;
 
-  throttle = Kp * p + Ki * i + Kd * d;
+  throttle = self_id == 0 ? LEADING_THROTTLE : Kp * p + Ki * i + Kd * d;
   //Serial.println(throttle);
   //Serial.print("aaaa: ");
   //Serial.println(command);

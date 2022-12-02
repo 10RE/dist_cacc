@@ -7,6 +7,7 @@ class USerial
 {
   public:
     USerial(int baudrate);
+    void init(int baudrate);
     void sendCommand(float data);
     void readCommand();
     void decodeCommand(char* command);

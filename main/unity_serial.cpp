@@ -3,6 +3,9 @@
 
 
 USerial::USerial(int baudrate) {
+}
+
+void USerial::init(int baudrate) {
   Serial.begin(baudrate);
 }
 
@@ -46,20 +49,20 @@ void USerial::readCommand() {
 }
 
 void USerial::sendCommand(float data) {
-    char buff[4];
-    char command[7];
-    command[0] = '$';
-    command[1] = (char) (4); // data length in char
-    floatToString(&buff[0], data);
-    command[2] = buff[0];
-    Serial.print(command[2]);
-    command[3] = buff[1];
-    command[4] = buff[2];
-    command[5] = buff[3];
-    command[6] = '^';
-    Serial.print(command);
-    //decodeCommand(&command[0], 7);
-    Serial.flush();
+  
+  typedef union {
+      float f;
+      char c[sizeof(float)];
+  } data_t;
+  Serial.write('$');
+  Serial.write((char)4);
+  data_t d;
+  d.f = data;
+  for(int i = 0; i < 4; i++) {
+    Serial.write(d.c[i]);
+  }
+  Serial.write('^');
+  Serial.flush();
 }
 
 void USerial::sendRaw() {

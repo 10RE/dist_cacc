@@ -4,6 +4,10 @@
 #define EN 12
 
 NSerial::NSerial(int baudrate) : mySerial(7, 6) {
+
+}
+
+void NSerial::init(int baudrate) {
     nPinInit();
     mySerial.begin(baudrate);
     delay(100);
