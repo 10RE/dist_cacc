@@ -92,7 +92,7 @@ float computeIdealDistance(float speed) {
   return 1+0.1*speed;
 }
 
-int self_id = 1;
+int self_id = 0;
 bool self_identified = false;
 
 float identify_self(int prev_vehicle_id) {
@@ -142,7 +142,7 @@ void loop() {
     net_serial.receive(leading_speed, leading_throttle);
   }
 
-  //UreadCommand();
+  UreadCommand();
 
   actualDistance = vehicle_data[1];
   idealDistance = computeIdealDistance(leading_speed);
