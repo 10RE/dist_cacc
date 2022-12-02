@@ -59,51 +59,38 @@ void setup()
   SendCommand("AT+GMR", "OK");
   delay(100);
   SendCommand("AT+CWMODE=3","OK");
-  SendCommand("AT+CWSAP=\"ESP\",\"testtest\",11,4,3", "OK");
-  delay(100);
+  SendCommand("AT+CWJAP=\"ESP\",\"testtest\"", "OK");
+  delay(5000);
   SendCommand("AT+CIPMUX=1", "OK");
-  SendCommand("AT+CIPAP=\"192.168.5.1\"", "OK");
-  SendCommand("AT+CIPSERVER=1", "OK");
-  delay(100);
-  SendCommand("AT+CIPAP?", "");
   delay(100);
   SendCommand("AT+CIFSR", "OK");
   delay(100);
   SendCommand("AT+CIPDINFO=1", "OK");
   delay(100);
+
+  SendCommand("AT+PING=192.168.5.1", "");
+  delay(5000);
   
-  //SendCommand("AT+CIPSTART=1,\"TCP\",\"192.168.5.2\",80", "");
-  //delay(100);
+  SendCommand("AT+CIPSTART=0,\"TCP\",\"192.168.5.1\",333", "OK");
+  delay(5000);
 }
 
 void loop()
 {
   //SendCommandBare("AT+CWMODE?");
   SendCommand("AT+CIPSTATUS", "OK");
+
+  String page = "test";
+  String cip_send = "AT+CIPSEND=0,4";
+  String cip_end = "AT+CIPCLOSE=0";
+  SendCommand(cip_send, "OK");
   delay(100);
-  // String page = "test";
-  // String cip_send = "AT+CIPSEND=0,4";
-  // String cip_end = "AT+CIPCLOSE=0";
-  // SendCommand(cip_send, "OK");
-  // delay(100);
-  // SendCommand(page, "OK");
-  // delay(100);
-  // SendCommand(cip_end, "OK");
-  // delay(100);
-  if (millis() > next_cycle) {
-    
-    // String page = "test";
-    // Serial.println(page.length());
-    //String cip_send = "AT+CIPSEND=1,4";
-    //String cip_end = "AT+CIPCLOSE=1";
-    //SendCommand(cip_send, "OK");
-    // SendCommand(page, "OK");;
-    //delay(100);
-    //next_cycle = millis() + cycle_time;
-    //delay(1000);
-    // SendCommand(cip_end, "OK");
-    // delay(100);
-  }
+  SendCommand(page, "OK");
+  delay(100);
+  SendCommand(cip_end, "OK");
+  delay(100);
+
+  delay(100);
   if (mySerial.available()){
     char ch = mySerial.read();
     Serial.write(ch);
