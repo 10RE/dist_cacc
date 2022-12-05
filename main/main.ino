@@ -162,8 +162,12 @@ void loop() {
 
   throttle = self_id == 0 ? LEADING_THROTTLE : leading_throttle + Kp * p + Ki * i + Kd * d;
     
-  if (self_id == 0 && millis() > breaking_time && vehicle_data[0] > 0) {
-    throttle = -1;
+  if (self_id == 0 && millis() > breaking_time) {
+      if (vehicle_data[0] > 0) {
+          throttle = -1;
+      } else {
+          throttle = 0;
+      }
   }
   //Serial.println(throttle);
   //Serial.print("aaaa: ");
