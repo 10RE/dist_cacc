@@ -16,6 +16,8 @@ public class VehicleSim : MonoBehaviour
     private float curThrottle = 0;
     private float curSpeed = 0;
 
+    private float maxThrottle = 30;
+
     private float prevTime = 0F;
     private float updatePeriod = 0.025F;
 
@@ -36,7 +38,18 @@ public class VehicleSim : MonoBehaviour
                 throttleQueue.Enqueue(0);
             }
         }
-        throttleQueue.Enqueue(t);
+        if (t > maxThrottle)
+        {
+            throttleQueue.Enqueue(maxThrottle);
+        }
+        else if (t < -maxThrottle)
+        {
+            throttleQueue.Enqueue(-maxThrottle);
+        }
+        else
+        {
+            throttleQueue.Enqueue(t);
+        }
         return throttleQueue.Dequeue();
     }
 

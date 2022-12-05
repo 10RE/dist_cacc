@@ -50,7 +50,7 @@ public class CommManager : MonoBehaviour
 
     public void Send(string message)
     {
-        Debug.Log("Send: " + (int)message[6] + " " + (int)message[7] + " " + (int)message[8] + " " + (int)message[9] + " ");
+        //Debug.Log("Send: " + (int)message[6] + " " + (int)message[7] + " " + (int)message[8] + " " + (int)message[9] + " ");
         outputQueue.Enqueue(message);
     }
 
@@ -89,14 +89,14 @@ public class CommManager : MonoBehaviour
         try
         {
             data = (char)serial.ReadByte();
-            Debug.Log(data);
+            //Debug.Log(data);
             if (data != '$')
             {
                 return null;
             }
             ret += data;
             data = (char)serial.ReadByte();
-            Debug.Log(data);
+            //Debug.Log(data);
             ret += data;
             int length = (int)data;
             for (int i = 0; i < length + 1; i++)
@@ -161,14 +161,14 @@ public class CommManager : MonoBehaviour
 
     void DecodeMessage(string msg)
     {
-        string print = "Recv: ";
+        string print = " Recv: ";
         byte[] b_array = { 0, 0, 0, 0};
         for (int i = 0; i < 4; i++)
         {
             b_array[i] = System.BitConverter.GetBytes(msg[i + 2])[0];
         }
         print += BitConverter.ToString(b_array);
-        Debug.Log(print);
+        Debug.Log(commPort + print);
         curThrottle = System.BitConverter.ToSingle(b_array, 0);
         //curThrottle = FromByte2Float(msg.Substring(2, 4));  
         //Debug.Log("Throttle: " + curThrottle);
@@ -178,7 +178,8 @@ public class CommManager : MonoBehaviour
     {
         string ret = "";
         byte[] bytes = System.BitConverter.GetBytes(num);
-        Debug.Log("Send: " + BitConverter.ToString(bytes));
+        //Debug.Log("Send: " + num);
+        //Debug.Log("Send: " + BitConverter.ToString(bytes));
         ret += (char) bytes[0];
         ret += (char) bytes[1];
         ret += (char) bytes[2];
