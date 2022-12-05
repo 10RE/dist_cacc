@@ -119,6 +119,8 @@ int Kd = 1;
 
 float p, i, d;  // proportional, integral, derivative
 
+unsigned long breading_time;
+
 NSerial net_serial(115200);
 
 void setup() {
@@ -131,6 +133,10 @@ void setup() {
   d = 0;
   prevActualDistance = INITIAL_DISTANCE;
   prevIdealDistance = INITIAL_DISTANCE;
+    
+  if (self_id == 0) {
+    breaking_time = millis() + 30000;
+  }
 }
 
 void loop() {
@@ -154,7 +160,11 @@ void loop() {
   prevActualDistance = actualDistance;
   prevIdealDistance = idealDistance;
 
-  throttle = self_id == 0 ? LEADING_THROTTLE : Kp * p + Ki * i + Kd * d;
+  throttle = self_id == 0 ? LEADING_THROTTLE : leading_throttle + Kp * p + Ki * i + Kd * d;
+    
+  if (self_id == 0 && millis() > breaking_time && vehicle_data[0] > 0) {
+    throttle = -1;
+  }
   //Serial.println(throttle);
   //Serial.print("aaaa: ");
   //Serial.println(command);
