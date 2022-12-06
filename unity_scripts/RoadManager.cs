@@ -11,7 +11,6 @@ public class RoadManager : MonoBehaviour
     public GameObject roadContainer;
     private bool spawnFlag = false;
     private Queue<GameObject> roadQueue = new Queue<GameObject>();
-    private float roadLength = 25;
 
     public void spawnNewRoad(float pos)
     {

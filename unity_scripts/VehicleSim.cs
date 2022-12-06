@@ -32,6 +32,8 @@ public class VehicleSim : MonoBehaviour
 
     public Text text;
 
+    public bool useComm = true;
+
     float updateThrottle(float t)
     {
         if (t < 0)
@@ -63,7 +65,7 @@ public class VehicleSim : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-
+        
     }
 
     void UpdateText(float speed, float throttle, float dist)
@@ -77,12 +79,17 @@ public class VehicleSim : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        throttle = comm.GetThrottle();
+
+        if (useComm)
+        {
+            throttle = comm.GetThrottle();
+        }
+
         if (Time.time > prevTime + updatePeriod)
         {
             curThrottle = updateThrottle(throttle);
         }
-        float drag_affection = curSpeed > 0 ? (((drag + Random.Range(0, dragNoise)) * curSpeed * curSpeed / mass + 0.03f * curSpeed / mass) * Time.deltaTime) : 0;
+        float drag_affection = curSpeed > 0 ? (((drag + Random.Range(0, dragNoise)) * curSpeed * curSpeed / mass + 0.05f * curSpeed ) * Time.deltaTime) : 0;
         float throttle_val = curThrottle + Random.Range(-throttleNoise, throttleNoise);
         throttle_val = curThrottle > 0 ?
             (throttle_val > 0 ? throttle_val : 0) :
@@ -95,8 +102,11 @@ public class VehicleSim : MonoBehaviour
         {
             float curDist = vehicleAhead.transform.position.z - transform.position.z - transform.localScale.z;
             UpdateText(curSpeed, curThrottle, curDist);
-            comm.SetCurState(curSpeed, curDist);
+            if (useComm)
+            {
+                comm.SetCurState(curSpeed, curDist);
+            }
         }
-
+        
     }
 }

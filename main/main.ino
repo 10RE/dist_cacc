@@ -22,9 +22,9 @@ float vehicle_leading_data[2] = { 0, 0 }; // speed, throttle
 float actualDistance, idealDistance;
 float prevActualDistance, prevIdealDistance;
 
-float Kp = 0.4;
+float Kp = 0.85;
 float Ki = 0.00001;
-float Kd = 00.01;
+float Kd = 0;
 
 float max_throttle = 1.3;
 float max_brake = 6;
@@ -144,7 +144,11 @@ float get_pot_read() {
 }
 
 // PID control
-float computeIdealDistance(float speed) {
+float computeIdealDistanceACC(float speed) {
+  return 3*(speed/6 + 1) * (speed/6 + 1) + 5;
+}
+
+float computeIdealDistanceCACC(float speed) {
   float d = 6;
   float d_p = 6;
   float vehicleLen = 15.5;
@@ -218,7 +222,7 @@ void PID_update() {
 
     if (!cacc_connection_flag) {
       actualDistance = vehicle_data[1];
-      idealDistance = computeIdealDistance(vehicle_data[0]);
+      idealDistance = computeIdealDistanceACC(vehicle_data[0]);
 
       // if (idealDistance < 3) {
       //   idealDistance = 3;
@@ -235,7 +239,7 @@ void PID_update() {
     } else {
 
       actualDistance = vehicle_data[1];
-      idealDistance = computeIdealDistance(vehicle_data[0]);
+      idealDistance = computeIdealDistanceCACC(vehicle_data[0]);
 
       if (idealDistance < 3) {
         idealDistance = 3;
