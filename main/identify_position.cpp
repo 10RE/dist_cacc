@@ -107,3 +107,29 @@ float identify_self(int prev_vehicle_id) {
     }
 
     */
+
+
+
+   
+      // net_serial.mySerial.println("AT+CIPSEND=12");
+      // net_serial.echoFind("OK");
+      // net_serial.echoFind(">");  
+      // typedef union {
+      //   long l;
+      //   char c[4];
+      // } long_t;
+      // long_t temp;
+      // temp.l = (long) p;
+      // for (int i = 0; i < 4; i++) {
+      //   net_serial.mySerial.write(temp.c[i]);
+      // }
+      // temp.l = (long) vehicle_data[1];
+      // for (int i = 0; i < 4; i++) {
+      //   net_serial.mySerial.write(temp.c[i]);
+      // }
+      // temp.l = (long) throttle;
+      // for (int i = 0; i < 4; i++) {
+      //   net_serial.mySerial.write(temp.c[i]);
+      // }
+      
+      // net_serial.mySerial.println();

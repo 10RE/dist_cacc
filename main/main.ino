@@ -3,6 +3,8 @@
 #define INITIAL_DISTANCE 1
 #define LEADING_THROTTLE 20
 
+#define USE_NET_SERIAL 0
+
 #define LED 13
 #define POT A0
 
@@ -35,7 +37,10 @@ unsigned long cacc_connection_time_out_start;
 
 unsigned long send_time_start;
 unsigned long send_period = 50;
-//NSerial net_serial(115200);
+
+#if USE_NET_SERIAL
+  NSerial net_serial(115200);
+#endif
 
 /*
  * serial communication with unity
@@ -164,7 +169,9 @@ void send_time_init() {
 }
 
 void setup() {
-  //net_serial.init(115200);
+  #if USE_NET_SERIAL
+    net_serial.init(115200);
+  #endif
   Serial.begin(115200);
 
   debug_led_init();
@@ -203,30 +210,6 @@ void PID_update() {
 
     if (!cacc_connection_flag) {
       throttle = Kp * p + Ki * i + Kd * d;
-
-      // net_serial.mySerial.println("AT+CIPSEND=12");
-      // net_serial.echoFind("OK");
-      // net_serial.echoFind(">");  
-      // typedef union {
-      //   long l;
-      //   char c[4];
-      // } long_t;
-      // long_t temp;
-      // temp.l = (long) p;
-      // for (int i = 0; i < 4; i++) {
-      //   net_serial.mySerial.write(temp.c[i]);
-      // }
-      // temp.l = (long) vehicle_data[1];
-      // for (int i = 0; i < 4; i++) {
-      //   net_serial.mySerial.write(temp.c[i]);
-      // }
-      // temp.l = (long) throttle;
-      // for (int i = 0; i < 4; i++) {
-      //   net_serial.mySerial.write(temp.c[i]);
-      // }
-      
-      // net_serial.mySerial.println();
-
     } else {
       throttle = leading_throttle + Kp * p + Ki * i + Kd * d;
     }
@@ -245,10 +228,11 @@ void loop() {
 
   update_debug_led_state(cacc_connection_flag);
 
-  if (cacc_connection_time_out_start + cacc_connection_time_out > millis()) {
-    cacc_connection_flag = false;
-  }
+  // if (cacc_connection_time_out_start + cacc_connection_time_out > millis()) {
+  //   cacc_connection_flag = false;
+  // }
 
+#if USE_NET_SERIAL
   if (self_id != 0) {
     // receive network msg
     if (net_serial.receive(leading_speed, leading_throttle))  {
@@ -256,18 +240,23 @@ void loop() {
       cacc_connection_time_out_start = millis();
     }
   }
+#endif
 
   PID_update();
 
+#if USE_NET_SERIAL
   if (self_id == 0) {
     net_serial.broadcastStates(vehicle_data[0], throttle);
   }
+#endif
 
   UreadCommand();
 
-  if (self_id == 1) {
-    net_serial.broadcastStates(vehicle_data[0], leading_throttle);
-  }
+#if USE_NET_SERIAL
+  // if (self_id == 1) {
+  //   net_serial.broadcastStates(vehicle_data[0], leading_throttle);
+  // }
+#endif
 
   if (send_time_start + send_period < millis()) {
     send_time_start = millis();

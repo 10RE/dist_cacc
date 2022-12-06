@@ -169,7 +169,7 @@ public class CommManager : MonoBehaviour
         }
         print += BitConverter.ToString(b_array);
         curThrottle = System.BitConverter.ToSingle(b_array, 0);
-        Debug.Log(commPort + print + " " + curThrottle);
+        //Debug.Log(commPort + print + " " + curThrottle);
         //curThrottle = FromByte2Float(msg.Substring(2, 4));  
         //Debug.Log("Throttle: " + curThrottle);
     }
