@@ -31,7 +31,7 @@ void NSerial::wifiInit() {
     }
 
     // listen for UDP broadcast
-    mySerial.println("AT+CIPSTART=\"UDP\",\"192.168.176.255\",15840,15840,0");
+    mySerial.println("AT+CIPSTART=\"UDP\",\"192.168.217.255\",15840,15840,0");
     delay(1000);
 }
 
@@ -91,7 +91,7 @@ void NSerial::broadcastStates(float speed, float throttle) {
     mySerial.println();
 }
 
-void NSerial::receive(float & speed, float & throttle) {
+bool NSerial::receive(float & speed, float & throttle) {
     data_t s, t;
     if (echoFind("+IPD,8:")) {
         for (int i = 0; i < 4; i++) {
@@ -104,5 +104,7 @@ void NSerial::receive(float & speed, float & throttle) {
         }
         speed = s.f;
         throttle = t.f;
+        return true;
     }
+    return false;
 }

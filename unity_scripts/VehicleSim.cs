@@ -1,22 +1,27 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class VehicleSim : MonoBehaviour
 {
     public float throttle;
-    public int throttleDelay = 20;
-    public float drag = 0.05f;
+    private int throttleDelay = 20;
+    private float drag = 0.0053219f;
+    //private float ground_drag = 1.76f;
 
-    public float dragNoise = 0.03f;
-    public float throttleNoise = 0.1f;
+    private float mass = 30000;
+
+    private float dragNoise = 0.02f;
+    private float throttleNoise = 0.1f;
 
     public CommManager comm;
 
     private float curThrottle = 0;
     private float curSpeed = 0;
 
-    private float maxThrottle = 30;
+    private float maxThrottle = 1.3f;
+    private float maxBrake = 6f;
 
     private float prevTime = 0F;
     private float updatePeriod = 0.025F;
@@ -24,6 +29,8 @@ public class VehicleSim : MonoBehaviour
     private Queue<float> throttleQueue = new Queue<float>();
 
     public GameObject vehicleAhead;
+
+    public Text text;
 
     float updateThrottle(float t)
     {
@@ -42,9 +49,9 @@ public class VehicleSim : MonoBehaviour
         {
             throttleQueue.Enqueue(maxThrottle);
         }
-        else if (t < -maxThrottle)
+        else if (t < -maxBrake)
         {
-            throttleQueue.Enqueue(-maxThrottle);
+            throttleQueue.Enqueue(-maxBrake);
         }
         else
         {
@@ -56,7 +63,15 @@ public class VehicleSim : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
+
+    }
+
+    void UpdateText(float speed, float throttle, float dist)
+    {
+        text.text = gameObject.name + "\n";
+        text.text += dist.ToString() + " m\n";
+        text.text += speed.ToString() + " m/s\n";
+        text.text += throttle.ToString() + " m/s2\n";
     }
 
     // Update is called once per frame
@@ -67,7 +82,7 @@ public class VehicleSim : MonoBehaviour
         {
             curThrottle = updateThrottle(throttle);
         }
-        float drag_affection = curSpeed > 0 ? (drag + Random.Range(0, dragNoise)) * curSpeed * Time.deltaTime : 0;
+        float drag_affection = curSpeed > 0 ? (((drag + Random.Range(0, dragNoise)) * curSpeed * curSpeed / mass + 0.03f * curSpeed / mass) * Time.deltaTime) : 0;
         float throttle_val = curThrottle + Random.Range(-throttleNoise, throttleNoise);
         throttle_val = curThrottle > 0 ?
             (throttle_val > 0 ? throttle_val : 0) :
@@ -78,8 +93,10 @@ public class VehicleSim : MonoBehaviour
         transform.Translate(Vector3.forward * Time.deltaTime * curSpeed);
         if (Time.time > prevTime + updatePeriod)
         {
-            float curDist = vehicleAhead.transform.position.z - transform.position.z;
+            float curDist = vehicleAhead.transform.position.z - transform.position.z - transform.localScale.z;
+            UpdateText(curSpeed, curThrottle, curDist);
             comm.SetCurState(curSpeed, curDist);
         }
+
     }
 }

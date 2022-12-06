@@ -36,7 +36,7 @@ public:
     bool sendCommandBare(String cmd);
 
     void broadcastStates(float speed, float throttle);
-    void receive(float & speed, float & throttle);
+    bool receive(float & speed, float & throttle);
 };
 
 #endif

@@ -48,17 +48,17 @@ public class CommManager : MonoBehaviour
         serial.Close();
     }
 
-    public void Send(string message)
+    public void Send(byte[] message)
     {
         //Debug.Log("Send: " + (int)message[6] + " " + (int)message[7] + " " + (int)message[8] + " " + (int)message[9] + " ");
         outputQueue.Enqueue(message);
     }
 
-    public string Read()
+    public byte[] Read()
     {
         if (inputQueue.Count == 0)
             return null;
-        return (string)inputQueue.Dequeue();
+        return (byte[])inputQueue.Dequeue();
     }
 
     public void ClearInput()
@@ -66,44 +66,44 @@ public class CommManager : MonoBehaviour
         inputQueue.Clear();
     }
 
-    public void Write(string message)
+    public void Write(byte[] message)
     {
-        byte[] b_array = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        //byte[] b_array = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         //System.Array.Reverse(b_array);
         //byte[] correct_b_array = new[] { b_array[1], b_array[0], b_array[3], b_array[2]};
         //b_array = System.Text.Encoding.UTF8.GetBytes(data);
-        for (int i = 0; i < 11; i++)
-        {
+        //for (int i = 0; i < 11; i++)
+        //{
             //Debug.Log((int)message[i]);
-            b_array[i] = System.Text.Encoding.UTF32.GetBytes("" + message[i])[0];
+        //    b_array[i] = System.Text.Encoding.UTF32.GetBytes("" + message[i])[0];
             //Debug.Log((int)b_array[i]);
-        }
-        serial.Write(b_array, 0, 11);
+        //}
+        serial.Write(message, 0, 11);
         serial.BaseStream.Flush();
     }
 
-    public string Retrieve(int timeout = 50)
+    public byte[] Retrieve(int timeout = 50)
     {
-        string ret = "";
-        char data = ' ';
+        byte[] ret = new byte[7];
+        byte data;
         try
         {
-            data = (char)serial.ReadByte();
+            data = (byte)serial.ReadByte();
             //Debug.Log(data);
             if (data != '$')
             {
                 return null;
             }
-            ret += data;
-            data = (char)serial.ReadByte();
+            ret[0] = data;
+            data = (byte)serial.ReadByte();
             //Debug.Log(data);
-            ret += data;
+            ret[1] = data;
             int length = (int)data;
             for (int i = 0; i < length + 1; i++)
             {
-                data = (char)serial.ReadByte();
+                data = (byte)serial.ReadByte();
                 //Debug.Log(System.Text.Encoding.UTF8.GetBytes("" + data)[0]);
-                ret += data;
+                ret[2 + i] = data;
                 //Debug.Log("");
             }
             //Debug.Log("exit");
@@ -127,12 +127,12 @@ public class CommManager : MonoBehaviour
             // Send
             if (outputQueue.Count != 0)
             {
-                string command = outputQueue.Dequeue().ToString();
+                byte[] command = (byte[])outputQueue.Dequeue();
                 Write(command);
             }
             // Read
-            string result = Retrieve();
-            if (result != null)
+            byte[] result = Retrieve();
+            if (result != null && result.Length != 0)
                 inputQueue.Enqueue(result);
         }
     }
@@ -146,7 +146,7 @@ public class CommManager : MonoBehaviour
             prevTime = Time.time;
             SendCurState();
         }
-        string message = Read();
+        byte[] message = Read();
         if (message != null)
         {
             DecodeMessage(message);
@@ -159,22 +159,22 @@ public class CommManager : MonoBehaviour
         return curThrottle;
     }
 
-    void DecodeMessage(string msg)
+    void DecodeMessage(byte[] msg)
     {
         string print = " Recv: ";
         byte[] b_array = { 0, 0, 0, 0};
         for (int i = 0; i < 4; i++)
         {
-            b_array[i] = System.BitConverter.GetBytes(msg[i + 2])[0];
+            b_array[i] = msg[2 + i];
         }
         print += BitConverter.ToString(b_array);
-        Debug.Log(commPort + print);
         curThrottle = System.BitConverter.ToSingle(b_array, 0);
+        Debug.Log(commPort + print + " " + curThrottle);
         //curThrottle = FromByte2Float(msg.Substring(2, 4));  
         //Debug.Log("Throttle: " + curThrottle);
     }
 
-    string FromFloat2Byte(float num)
+    byte[] FromFloat2Byte(float num)
     {
         string ret = "";
         byte[] bytes = System.BitConverter.GetBytes(num);
@@ -185,7 +185,7 @@ public class CommManager : MonoBehaviour
         ret += (char) bytes[2];
         ret += (char) bytes[3];
         //Debug.Log("Send: " + (int)bytes[0] + " " + (int)bytes[1] + " " + (int)bytes[2] + " " + (int)bytes[3] + " ");
-        return ret;
+        return bytes;
     }
 
     float FromByte2Float(string data)
@@ -209,13 +209,24 @@ public class CommManager : MonoBehaviour
         //Debug.Log("#");
         //Debug.Log(curSpeed);
         //Debug.Log("Dist: " + curDist);
-        string msg = "$";
-        msg += (char)8;
+        byte[] msg = new byte[11];
+        msg[0] = (byte)'$';
+        msg[1] = (byte)8;
         //msg += (byte)((test_send) & 0xFF);
-        msg += FromFloat2Byte(curSpeed);
-        msg += FromFloat2Byte(curDist);
-        msg += '^';
+        byte[] float_byte = FromFloat2Byte(curSpeed);
+        for (int i = 0; i < 4; i ++)
+        {
+            msg[2 + i] = float_byte[i];
+        }
+        float_byte = FromFloat2Byte(curDist);
+        for (int i = 0; i < 4; i++)
+        {
+            msg[6 + i] = float_byte[i];
+        }
+        msg[10] = (byte)'^';
+        //Debug.Log("Send: " + BitConverter.ToString(msg));
         Send(msg);
+        
     }
 
     public void SetCurState(float speed, float distance)
