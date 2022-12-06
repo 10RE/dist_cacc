@@ -75,13 +75,15 @@ bool NSerial::sendCommandBare(String cmd){
 mySerial.println(cmd); // Send "AT+" command to module
 }
 
-void NSerial::broadcastStates(float speed, float throttle) {
+void NSerial::broadcastStates(uint8_t id, float speed, float throttle) {
     data_t s, t;
     s.f = speed;
     t.f = throttle;
-    mySerial.println("AT+CIPSEND=8");
+    mySerial.println("AT+CIPSEND=9");
     echoFind("OK");
-    echoFind(">");  
+    echoFind(">");
+    //mySerial.write((char)0);
+    mySerial.write((char)id);
     for (int i = 0; i < 4; i++) {
     mySerial.write(s.c[i]);
     }
@@ -91,9 +93,13 @@ void NSerial::broadcastStates(float speed, float throttle) {
     mySerial.println();
 }
 
-bool NSerial::receive(float & speed, float & throttle) {
+bool NSerial::receiveStates(uint8_t& id, float & speed, float & throttle) {
     data_t s, t;
-    if (echoFind("+IPD,8:")) {
+    if (echoFind("+IPD,9:")) {
+        // while (!mySerial.available()) {}
+        // mySerial.read();
+        while (!mySerial.available()) {}
+        id = (uint8_t)mySerial.read();
         for (int i = 0; i < 4; i++) {
             while (!mySerial.available()) {}
             s.c[i] = mySerial.read();

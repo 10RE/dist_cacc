@@ -17,14 +17,14 @@ bool led_state = LOW;
 
 float throttle;
 
-float leading_speed, leading_throttle;
+float vehicle_leading_data[2] = { 0, 0 }; // speed, throttle
 
 float actualDistance, idealDistance;
 float prevActualDistance, prevIdealDistance;
 
-float Kp = 2;
-float Ki = 0.5;
-float Kd = 0;
+float Kp = 0.4;
+float Ki = 0.00001;
+float Kd = 00.01;
 
 float max_throttle = 1.3;
 float max_brake = 6;
@@ -40,12 +40,13 @@ unsigned long send_period = 50;
 
 #if USE_NET_SERIAL
   NSerial net_serial(115200);
+  float vehicle_ahead_data[2] = { 0, 0 }; // speed, throttle
 #endif
 
 /*
  * serial communication with unity
 */
-float vehicle_data[2] = { 0, 0 };
+float vehicle_data[2] = { 0, 0 }; // speed, distance
 char recieve_buff[128];
 int recieve_cursor = 0;
 
@@ -144,7 +145,25 @@ float get_pot_read() {
 
 // PID control
 float computeIdealDistance(float speed) {
-  return 1+0.1*speed;
+  float d = 6;
+  float d_p = 6;
+  float vehicleLen = 15.5;
+  float commuLatency = 0.02;
+  float r_safe;
+  float boundaryValue1 = 0.3;
+  float boundaryValue2 = 1.3;
+
+  //r_safe = speed * speed / 2 * (1 / d - 1 / d_p) + 0.02 * speed;
+  r_safe = speed * speed / 2 * (1 / d - 1 / d_p) + 0.1 * speed;
+  if (r_safe < boundaryValue1)
+    return r_safe;
+  else if (r_safe <= boundaryValue2)
+    return 1.2 * vehicleLen;
+  else if (r_safe <= 1.6 * vehicleLen)
+    return 1.6 * vehicleLen;
+  else {
+    return r_safe;
+  }
 }
 
 bool self_identified = false;
@@ -183,9 +202,6 @@ void setup() {
   prevActualDistance = INITIAL_DISTANCE;
   prevIdealDistance = INITIAL_DISTANCE;
 
-  leading_speed = 0;
-  leading_throttle = 0;
-
   cacc_connection_time_init();
   send_time_init();
 
@@ -198,20 +214,41 @@ void PID_update() {
   }
   else {
 
-    actualDistance = vehicle_data[1];
-    idealDistance = computeIdealDistance(leading_speed);
-
-    p = actualDistance - idealDistance;
-    i += p;
-    d = (actualDistance - prevActualDistance) - (prevIdealDistance - idealDistance);
-
-    prevActualDistance = actualDistance;
-    prevIdealDistance = idealDistance;
+    
 
     if (!cacc_connection_flag) {
+      actualDistance = vehicle_data[1];
+      idealDistance = computeIdealDistance(vehicle_data[0]);
+
+      // if (idealDistance < 3) {
+      //   idealDistance = 3;
+      // }
+
+      p = actualDistance - idealDistance;
+      i += p;
+      d = (actualDistance - prevActualDistance) - (prevIdealDistance - idealDistance);
+
+      prevActualDistance = actualDistance;
+      prevIdealDistance = idealDistance;
+
       throttle = Kp * p + Ki * i + Kd * d;
     } else {
-      throttle = leading_throttle + Kp * p + Ki * i + Kd * d;
+
+      actualDistance = vehicle_data[1];
+      idealDistance = computeIdealDistance(vehicle_data[0]);
+
+      if (idealDistance < 3) {
+        idealDistance = 3;
+      }
+
+      p = actualDistance - idealDistance;
+      i += p;
+      d = (actualDistance - prevActualDistance) - (prevIdealDistance - idealDistance);
+
+      prevActualDistance = actualDistance;
+      prevIdealDistance = idealDistance;
+
+      throttle = vehicle_leading_data[1] + Kp * p + Ki * i + Kd * d;
     }
 
     if (throttle > max_throttle) {
@@ -235,7 +272,18 @@ void loop() {
 #if USE_NET_SERIAL
   if (self_id != 0) {
     // receive network msg
-    if (net_serial.receive(leading_speed, leading_throttle))  {
+    int received_id = -1;
+    float received_vehicle_speed = 0;
+    float received_vehicle_throttle = 0;
+    if (net_serial.receiveStates(received_id, received_vehicle_speed, received_vehicle_throttle))  {
+      if (received_id == vehicle_ahead_id) {
+        vehicle_ahead_data[0] = received_vehicle_speed;
+        vehicle_ahead_data[1] = received_vehicle_throttle;
+      }
+      else if (received_id == 0) {
+        vehicle_leading_data[0] = received_vehicle_speed;
+        vehicle_leading_data[1] = received_vehicle_throttle;
+      }
       cacc_connection_flag = true;
       cacc_connection_time_out_start = millis();
     }
@@ -245,21 +293,14 @@ void loop() {
   PID_update();
 
 #if USE_NET_SERIAL
-  if (self_id == 0) {
-    net_serial.broadcastStates(vehicle_data[0], throttle);
-  }
+  net_serial.broadcastStates(self_id, vehicle_data[0], throttle);
 #endif
 
   UreadCommand();
 
-#if USE_NET_SERIAL
-  // if (self_id == 1) {
-  //   net_serial.broadcastStates(vehicle_data[0], leading_throttle);
-  // }
-#endif
-
   if (send_time_start + send_period < millis()) {
     send_time_start = millis();
-    UsendCommand(vehicle_data[1]);
+    UsendCommand(throttle);
+    
   }
 }
