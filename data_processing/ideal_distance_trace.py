@@ -4,10 +4,10 @@ import numpy as np
 paths = [
     "v0.csv",
     "v1.csv",
-    #"v2.csv",
+    "v2.csv",
 ]
 
-def computeIdealDistanceCACC(speed):
+def prevComputeIdealDistanceCACC(speed):
   d = 6
   d_p = 6
   vehicleLen = 15.5
@@ -16,7 +16,6 @@ def computeIdealDistanceCACC(speed):
   boundaryValue1 = 0.3
   boundaryValue2 = 1.3
   ret = 0
-
   r_safe = speed * speed / 2 * (1 / d - 1 / d_p) + 0.1 * speed
   if (r_safe < boundaryValue1):
     ret = r_safe
@@ -26,10 +25,16 @@ def computeIdealDistanceCACC(speed):
     ret = 1.6 * vehicleLen
   else:
     ret = r_safe
-  
   if (ret < lower_safe_boundary_with_comm_latency):
     ret = lower_safe_boundary_with_comm_latency
+  return ret
 
+def computeIdealDistanceCACC(speed):
+  vehicleLen = 15.5
+  if (speed < 10):
+    ret = 1.2 * vehicleLen /(1 + np.exp(-((speed - 3.5))))
+  else:
+    ret = 1.2 * vehicleLen + 0.4 * vehicleLen /(1 + np.exp(-(speed - 13.5)))
   return ret
 
 def computeIdealDistanceACC(speed):

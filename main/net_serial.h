@@ -6,7 +6,7 @@
 
 #include "net_serial.h"
 
-#define TIMEOUT 500 // mS
+#define TIMEOUT 50 // mS
 #define EN 12
 
 typedef union {

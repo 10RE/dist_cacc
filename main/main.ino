@@ -11,8 +11,8 @@
 #define SOP '$'
 #define EOP '^'
 
-int self_id = 2;
-int vehicle_ahead_id = 1;
+int self_id = 1;
+int vehicle_ahead_id = 0;
 
 bool led_state = LOW;
 
@@ -40,7 +40,7 @@ unsigned long send_time_start;
 unsigned long send_period = 50;
 
 unsigned long recv_time_start;
-unsigned long recv_period = 500;
+unsigned long recv_period = 100;
 
 #if USE_NET_SERIAL
   NSerial net_serial(115200);
@@ -199,10 +199,10 @@ float computeIdealDistanceACC(float speed) {
 float computeIdealDistanceCACC(float speed) {
   float vehicleLen = 15.5;
   float commuLatency = 0.5;
-  float lower_safe_boundary_with_comm_latency = 3.65 * commuLatency * commuLatency + 3;
+  float lower_safe_boundary_with_comm_latency = 3.65 * commuLatency * commuLatency + vehicleLen * 0.5;
   float ret = 0;
   if (speed < 10) {
-    ret = 1.2 * vehicleLen /(1 + exp(-((speed - 3.5))));
+    ret = 0.6 * vehicleLen + 0.6 * vehicleLen /(1 + exp(-((speed - 3.5))));
   }
   else {
     ret = 1.2 * vehicleLen + 0.4 * vehicleLen /(1 + exp(-(speed - 13.5)));
@@ -315,12 +315,12 @@ void PID_update() {
         idealDistance = computeIdealDistanceCACC(vehicle_leading_data[0]);
       }
       else if (vehicle_leading_data[1] < -4) {
-        idealDistance = computeIdealDistanceACC(vehicle_data[0]);;
+        idealDistance = computeIdealDistanceACC(vehicle_data[0]);
       }
       
 
-      if (idealDistance < 3) {
-        idealDistance = 3;
+      if (idealDistance < 5) {
+        idealDistance = 5;
       }
 
       p = actualDistance - idealDistance;
@@ -330,7 +330,7 @@ void PID_update() {
       prevActualDistance = actualDistance;
       prevIdealDistance = idealDistance;
 
-      float safe_brake_distance = 3 * (vehicle_data[0] / 6 + 1) * (vehicle_data[0] / 6 + 1) + 5;
+      //float safe_brake_distance = 3 * (vehicle_data[0] / 6 + 1) * (vehicle_data[0] / 6 + 1) + 5;
 
       // if (vehicle_leading_data[1] > 0) {
       //   throttle = vehicle_ahead_data[1] + 0.1 * p + 0.000001 * i +  1 * d;
@@ -343,15 +343,20 @@ void PID_update() {
         i = 0;
       }
       if (vehicle_leading_data[1] > 0) {
-        throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i +  1 * d;
+        throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
       }
-      else if (vehicle_leading_data[1] < -4) {
-        if (vehicle_data[1] < safe_brake_distance) {
-          throttle = -max_brake;
-        }
-        else {
-          throttle = 0.05 * p + i + 1 * d;
-        }
+      else if (vehicle_leading_data[1] < 0) {
+        //if (vehicle_data[1] < safe_brake_distance) {
+        // if (vehicle_data[0] < 5) {
+        //   throttle = Kp * p + Ki * i + Kd * d;
+        // }
+        // else {
+          throttle = -max_brake + Kp * p + Ki * i + Kd * d;
+        // }
+        //}
+        //else {
+        //  throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 2 * d;
+        //}
       }
     }
 
