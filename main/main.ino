@@ -11,8 +11,8 @@
 #define SOP '$'
 #define EOP '^'
 
-int self_id = 1;
-int vehicle_ahead_id = 0;
+int self_id = 2;
+int vehicle_ahead_id = 1;
 
 bool led_state = LOW;
 
@@ -40,7 +40,7 @@ unsigned long send_time_start;
 unsigned long send_period = 50;
 
 unsigned long recv_time_start;
-unsigned long recv_period = 100;
+unsigned long recv_period = 200;
 
 #if USE_NET_SERIAL
   NSerial net_serial(115200);
@@ -311,12 +311,12 @@ void PID_update() {
 
       actualDistance = vehicle_data[1];
       //idealDistance = computeIdealDistanceCACC(vehicle_leading_data[0]);
-      if (vehicle_leading_data[1] > 0) {
+      //if (vehicle_leading_data[1] > ) {
         idealDistance = computeIdealDistanceCACC(vehicle_leading_data[0]);
-      }
-      else if (vehicle_leading_data[1] < -4) {
-        idealDistance = computeIdealDistanceACC(vehicle_data[0]);
-      }
+      // }
+      // else if (vehicle_leading_data[1] < -4) {
+      //   idealDistance = computeIdealDistanceACC(vehicle_data[0]);
+      // }
       
 
       if (idealDistance < 5) {
@@ -342,22 +342,23 @@ void PID_update() {
       if (p < 0) {
         i = 0;
       }
-      if (vehicle_leading_data[1] > 0) {
-        throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
-      }
-      else if (vehicle_leading_data[1] < 0) {
+      throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
+      // if (vehicle_leading_data[1] > 0) {
+      //   throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
+      // }
+      // else {
         //if (vehicle_data[1] < safe_brake_distance) {
         // if (vehicle_data[0] < 5) {
         //   throttle = Kp * p + Ki * i + Kd * d;
         // }
         // else {
-          throttle = -max_brake + Kp * p + Ki * i + Kd * d;
+          //throttle = -max_brake + Kp * p + Ki * i + Kd * d;
         // }
         //}
         //else {
         //  throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 2 * d;
         //}
-      }
+      //}
     }
 
 

@@ -79,6 +79,42 @@ public class VehicleSim : MonoBehaviour
         text.text += throttle.ToString() + " m/s2\n";
     }
 
+    float computeIdealDistanceACC(float speed)
+    {
+        return 3 * (speed / 6 + 1) * (speed / 6 + 1) + 5;
+    }
+
+    float computeIdealDistanceCACC(float speed)
+    {
+        float d = 6;
+        float d_p = 6;
+        float vehicleLen = 15.5f;
+        float commuLatency = 0.5f;
+        float lower_safe_boundary_with_comm_latency = 3.65f * commuLatency * commuLatency + 3; // 0.5 * (max_acc + abs(max_brake)) * commuLatency^2 + 3;
+        float r_safe;
+        float boundaryValue1 = 0.3f;
+        float boundaryValue2 = 1.3f;
+
+        float ret = 0;
+
+        //r_safe = speed * speed / 2 * (1 / d - 1 / d_p) + 0.02 * speed;
+        r_safe = speed * speed / 2 * (1 / d - 1 / d_p) + 0.1f * speed;
+        if (r_safe < boundaryValue1)
+            ret = r_safe;
+        else if (r_safe <= boundaryValue2)
+            ret = 1.2f * vehicleLen;
+        else if (r_safe <= 1.6 * vehicleLen)
+            ret = 1.6f * vehicleLen;
+        else
+        {
+            ret = r_safe;
+        }
+
+        ret = ret < lower_safe_boundary_with_comm_latency ? lower_safe_boundary_with_comm_latency : ret;
+
+        return ret;
+    }
+
     // Update is called once per frame
     void Update()
     {

@@ -6,9 +6,6 @@
 
 #include "net_serial.h"
 
-#define TIMEOUT 50 // mS
-#define EN 12
-
 typedef union {
     float f;
     char c[sizeof(float)];

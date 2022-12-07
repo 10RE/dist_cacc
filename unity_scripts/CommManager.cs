@@ -20,9 +20,11 @@ public class CommManager : MonoBehaviour
     private float msg = 0;
 
     private float prevTime = 0F;
-    private float sendPeriod = 0.5F;
+    private float sendPeriod = 0.05F;
 
     private bool valChecked = false;
+
+    public bool sendClear = false;
 
     public int test_send = 0;
 
@@ -41,6 +43,8 @@ public class CommManager : MonoBehaviour
         inputQueue = Queue.Synchronized(new Queue());
         Thread thread = new Thread(ThreadLoop);
         thread.Start();
+        SendClear();
+        SendClear();
         SendClear();
     }
 
@@ -151,6 +155,11 @@ public class CommManager : MonoBehaviour
         if (message != null)
         {
             DecodeMessage(message);
+        }
+        if (sendClear)
+        {
+            SendClear();
+            sendClear = false;
         }
         //Debug.Log(FromFloat2Byte(1.1f));
     }
