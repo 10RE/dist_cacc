@@ -41,6 +41,7 @@ public class CommManager : MonoBehaviour
         inputQueue = Queue.Synchronized(new Queue());
         Thread thread = new Thread(ThreadLoop);
         thread.Start();
+        SendClear();
     }
 
     private void OnApplicationQuit()
@@ -211,7 +212,7 @@ public class CommManager : MonoBehaviour
         //Debug.Log("Dist: " + curDist);
         byte[] msg = new byte[11];
         msg[0] = (byte)'$';
-        msg[1] = (byte)8;
+        msg[1] = (byte)0;
         //msg += (byte)((test_send) & 0xFF);
         byte[] float_byte = FromFloat2Byte(curSpeed);
         for (int i = 0; i < 4; i ++)
@@ -226,7 +227,21 @@ public class CommManager : MonoBehaviour
         msg[10] = (byte)'^';
         //Debug.Log("Send: " + BitConverter.ToString(msg));
         Send(msg);
-        
+    }
+
+    public void SendClear()
+    {
+        byte[] msg = new byte[11];
+        msg[0] = (byte)'$';
+        msg[1] = (byte)1;
+        //msg += (byte)((test_send) & 0xFF);
+        byte[] float_byte = FromFloat2Byte(curSpeed);
+        for (int i = 0; i < 8; i++)
+        {
+            msg[2 + i] = 0;
+        }
+        msg[10] = (byte)'^';
+        Send(msg);
     }
 
     public void SetCurState(float speed, float distance)

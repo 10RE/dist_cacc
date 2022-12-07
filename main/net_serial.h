@@ -37,7 +37,7 @@ public:
 
     void broadcastStates(uint8_t id, float speed, float throttle);
     
-    bool receiveStates(uint8_t& id, float & speed, float & throttle);
+    bool receiveStates(uint8_t & id, float & speed, float & throttle);
 };
 
 #endif

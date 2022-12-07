@@ -1,6 +1,6 @@
 #include "net_serial.h"
 
-#define TIMEOUT 500 // mS
+#define TIMEOUT 100 // mS
 #define EN 12
 
 NSerial::NSerial(int baudrate) : mySerial(7, 6) {
@@ -81,33 +81,34 @@ void NSerial::broadcastStates(uint8_t id, float speed, float throttle) {
     t.f = throttle;
     mySerial.println("AT+CIPSEND=9");
     echoFind("OK");
-    echoFind(">");
-    //mySerial.write((char)0);
-    mySerial.write((char)id);
-    for (int i = 0; i < 4; i++) {
-    mySerial.write(s.c[i]);
+    if (echoFind(">")) {
+        //mySerial.write((char)0);
+        mySerial.write((char)id);
+        for (int i = 0; i < 4; i++) {
+        mySerial.write(s.c[i]);
+        }
+        for (int i = 0; i < 4; i++) {
+        mySerial.write(t.c[i]);
+        }
+        mySerial.println();
     }
-    for (int i = 0; i < 4; i++) {
-    mySerial.write(t.c[i]);
-    }
-    mySerial.println();
 }
 
 bool NSerial::receiveStates(uint8_t& id, float & speed, float & throttle) {
     data_t s, t;
     if (echoFind("+IPD,9:")) {
-        // while (!mySerial.available()) {}
-        // mySerial.read();
         while (!mySerial.available()) {}
         id = (uint8_t)mySerial.read();
-        for (int i = 0; i < 4; i++) {
-            while (!mySerial.available()) {}
-            s.c[i] = mySerial.read();
-        }
-        for (int i = 0; i < 4; i++) {
-            while (!mySerial.available()) {}
-            t.c[i] = mySerial.read();
-        }
+        // for (int i = 0; i < 4; i++) {
+        //     while (!mySerial.available()) {}
+        //     s.c[i] = mySerial.read();
+        // }
+        mySerial.readBytes(s.c, 4);
+        // for (int i = 0; i < 4; i++) {
+        //     while (!mySerial.available()) {}
+        //     t.c[i] = mySerial.read();
+        // }
+        mySerial.readBytes(t.c, 4);
         speed = s.f;
         throttle = t.f;
         return true;

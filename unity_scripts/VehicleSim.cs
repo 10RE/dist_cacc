@@ -28,6 +28,9 @@ public class VehicleSim : MonoBehaviour
 
     private Queue<float> throttleQueue = new Queue<float>();
 
+    private float prevWriteTime = 0f;
+    private float writePeriod = 1f;
+
     public GameObject vehicleAhead;
 
     public Text text;
@@ -98,15 +101,24 @@ public class VehicleSim : MonoBehaviour
         curSpeed = curSpeed + throttle_affection - drag_affection;
         curSpeed = curSpeed > 0 ? curSpeed : 0;
         transform.Translate(Vector3.forward * Time.deltaTime * curSpeed);
+        float curDist = vehicleAhead.transform.position.z - transform.position.z - transform.localScale.z;
         if (Time.time > prevTime + updatePeriod)
         {
-            float curDist = vehicleAhead.transform.position.z - transform.position.z - transform.localScale.z;
+            //float curDist = vehicleAhead.transform.position.z - transform.position.z - transform.localScale.z;
             UpdateText(curSpeed, curThrottle, curDist);
             if (useComm)
             {
                 comm.SetCurState(curSpeed, curDist);
             }
+            prevTime = Time.time;
         }
+
+        if (Time.time > prevWriteTime + writePeriod)
+        {
+            GetComponent<FileWriter>().Write(curSpeed.ToString() + "," + curDist.ToString() + "," + curThrottle.ToString());
+            prevWriteTime = Time.time;
+        }
+
         
     }
 }
