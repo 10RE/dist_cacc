@@ -32,7 +32,7 @@ def prevComputeIdealDistanceCACC(speed):
 def computeIdealDistanceCACC(speed):
   vehicleLen = 15.5
   if (speed < 10):
-    ret = 1.2 * vehicleLen /(1 + np.exp(-((speed - 3.5))))
+    ret = 0.6 * vehicleLen + 0.6 * vehicleLen /(1 + np.exp(-((speed - 3.5))))
   else:
     ret = 1.2 * vehicleLen + 0.4 * vehicleLen /(1 + np.exp(-(speed - 13.5)))
   return ret
