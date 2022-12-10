@@ -342,11 +342,11 @@ void PID_update() {
       if (p < 0) {
         i = 0;
       }
-      throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
-      // if (vehicle_leading_data[1] > 0) {
-      //   throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
-      // }
-      // else {
+      //throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
+      if (vehicle_leading_data[1] > 0) {
+        throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
+      }
+      else {
         //if (vehicle_data[1] < safe_brake_distance) {
         // if (vehicle_data[0] < 5) {
         //   throttle = Kp * p + Ki * i + Kd * d;
@@ -356,9 +356,9 @@ void PID_update() {
         // }
         //}
         //else {
-        //  throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 2 * d;
+        throttle = vehicle_leading_data[1] + 0.05 * p + 0.000001 * i + 2 * d;
         //}
-      //}
+      }
     }
 
 
