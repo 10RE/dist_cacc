@@ -33,7 +33,7 @@ float max_brake = 6;
 float p, i, d;  // proportional, integral, derivative
 
 bool cacc_connection_flag = false;
-unsigned long cacc_connection_time_out = 5000;
+unsigned long cacc_connection_time_out = 1000;
 unsigned long cacc_connection_time_out_start;
 
 unsigned long send_time_start;

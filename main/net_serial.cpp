@@ -79,7 +79,7 @@ void NSerial::broadcastStates(uint8_t id, float speed, float throttle) {
     data_t s, t;
     s.f = speed;
     t.f = throttle;
-    mySerial.println("AT+CIPSEND=9");
+    mySerial.println("AT+CIPSEND=10");
     echoFind("OK");
     if (echoFind(">")) {
         //mySerial.write((char)0);
@@ -90,14 +90,14 @@ void NSerial::broadcastStates(uint8_t id, float speed, float throttle) {
         for (int i = 0; i < 4; i++) {
         mySerial.write(t.c[i]);
         }
-        //mySerial.write('^');
+        mySerial.write('^');
         mySerial.println();
     }
 }
 
 bool NSerial::receiveStates(uint8_t& id, float & speed, float & throttle) {
     data_t s, t;
-    if (echoFind("+IPD,9:")) {
+    if (echoFind("+IPD,10:")) {
         while (!mySerial.available()) {}
         id = (uint8_t)mySerial.read();
         // for (int i = 0; i < 4; i++) {
@@ -110,13 +110,13 @@ bool NSerial::receiveStates(uint8_t& id, float & speed, float & throttle) {
         //     t.c[i] = mySerial.read();
         // }
         mySerial.readBytes(t.c, 4);
-        //char check;
-        //mySerial.readBytes(&check, 1);
-        // if (check == '^') {
-        //     speed = s.f;
-        //     throttle = t.f;
-        //     return true;
-        // }
+        char check;
+        mySerial.readBytes(&check, 1);
+        if (check == '^') {
+            speed = s.f;
+            throttle = t.f;
+            return true;
+        }
         return true;
     }
     return false;
