@@ -1,6 +1,6 @@
 #include "net_serial.h"
 
-#define TIMEOUT 100 // mS
+#define TIMEOUT 45 // mS
 #define EN 12
 
 NSerial::NSerial(int baudrate) : mySerial(7, 6) {
@@ -31,7 +31,7 @@ void NSerial::wifiInit() {
     }
 
     // listen for UDP broadcast
-    mySerial.println("AT+CIPSTART=\"UDP\",\"192.168.137.255\",15840,15840,0");
+    mySerial.println("AT+CIPSTART=\"UDP\",\"192.168.217.255\",15840,15840,0");
     delay(1000);
 }
 
@@ -117,7 +117,7 @@ bool NSerial::receiveStates(uint8_t& id, float & speed, float & throttle) {
             throttle = t.f;
             return true;
         }
-        return true;
+        return false;
     }
     return false;
 }

@@ -1,5 +1,7 @@
 #include "net_serial.h"
 
+#define VEHICLE_ID 1
+
 #define INITIAL_DISTANCE 1
 #define LEADING_THROTTLE 20
 
@@ -11,8 +13,17 @@
 #define SOP '$'
 #define EOP '^'
 
-int self_id = 2;
-int vehicle_ahead_id = 1;
+#if VEHICLE_ID == 0
+  int self_id = 0;
+  int vehicle_ahead_id = -1;
+#elif VEHICLE_ID == 1
+  int self_id = 1;
+  int vehicle_ahead_id = 0;
+#else
+  int self_id = 2;
+  int vehicle_ahead_id = 1;
+#endif
+
 
 bool led_state = LOW;
 
@@ -27,10 +38,18 @@ float Kp = 1.5;
 float Ki = 0;
 float Kd = 0;
 
-float max_throttle = 1.3;
-float max_brake = 6;
+float cacc_kp = 0;
 
-float p, i, d;  // proportional, integral, derivative
+#if VEHICLE_ID == 0
+  float max_throttle = 1;
+  float max_brake = 6;
+#elif VEHICLE_ID == 1
+  float max_throttle = 1.3;
+  float max_brake = 6;
+#endif
+
+
+float prop, i, d;  // proportional, integral, derivative
 
 bool cacc_connection_flag = false;
 unsigned long cacc_connection_time_out = 1000;
@@ -92,24 +111,52 @@ void toggle_debug_led() {
 
 void UreadCommand() {
     int id = 0;
+    // Serial.readBytes(recieve_buff, 11);
+    // if (recieve_buff[0] == '$' && recieve_buff[10] == '^') {
+    //   UsendRecieved();
+    // }
+
     if (Serial.available() > 0) {
       char c = Serial.read();
       if (c == '$') {
           recieve_buff[0] = c;
-          id ++;
-          while (id < 11) {
-            if (Serial.available() > 0) {
-              c = Serial.read();
-              recieve_buff[id] = c;
-              id ++;
-            }
-          }
-          //Serial.print(id);
-          if (recieve_buff[10] == '^') {
-            UdecodeCommand(&recieve_buff[0]);
-          }
+          recieve_cursor = 1;
+          return;
+      }
+      if (recieve_cursor > 0 && recieve_cursor < 10) {
+        recieve_buff[recieve_cursor] = c;
+        recieve_cursor ++;
+      }
+      else if (recieve_cursor == 10) {
+        recieve_buff[recieve_cursor] = c;
+        if (c == '^') {
+          //UsendRecieved();
+          UdecodeCommand(&recieve_buff[0]);
+        }
+        recieve_cursor = 0;
       }
     }
+
+    // if (Serial.available() > 0) {
+    //   char c = Serial.read();
+    //   if (c == '$') {
+    //       recieve_buff[0] = c;
+    //       id ++;
+    //       while (id < 11) {
+    //         if (Serial.available() > 0) {
+    //           c = Serial.read();
+    //           recieve_buff[id] = c;
+    //           id ++;
+    //         }
+    //       }
+          
+    //       //Serial.print(id);
+    //       if (recieve_buff[10] == '^') {
+    //         UsendRecieved();
+    //         //UdecodeCommand(&recieve_buff[0]);
+    //       }
+    //   }
+    // }
 }
 
 void UsendCommand(float data) {
@@ -124,17 +171,32 @@ void UsendCommand(float data) {
   Serial.flush();
 }
 
+void UsendRecieved() {
+  Serial.write('$');
+  Serial.write((char)4);
+  for(int i = 0; i < 4; i++) {
+    Serial.write(recieve_buff[6 + i]);
+  }
+  Serial.write('^');
+  Serial.flush();
+}
+
 void UsendRaw() {
   Serial.print(recieve_buff);
   Serial.flush();
 }
 
 void reset_pid() {
-  p = 0;
+  prop = 0;
   i = 0;
   d = 0;
   prevActualDistance = 0;
   prevIdealDistance = 0;
+}
+
+void set_pid_p(float p_in) {
+  reset_pid();
+  cacc_kp = p_in;
 }
 
 void UdecodeCommand(char* command) {
@@ -161,6 +223,13 @@ void UdecodeCommand(char* command) {
     else if (command_id == 1) {
       //toggle_debug_led(); 
       reset_pid();
+    }
+    else if (command_id == 2) {
+      data_t d1;
+      for (int i = 0; i < 4; i ++) {
+        d1.c[i] = command[2 + i];
+      }
+      set_pid_p(d1.f);
     }
 
     
@@ -274,7 +343,7 @@ void setup() {
   debug_led_init();
 
   // initialize PID
-  p = 0;
+  prop = 0;
   i = 0;
   d = 0;
   prevActualDistance = INITIAL_DISTANCE;
@@ -299,14 +368,14 @@ void PID_update() {
       //   idealDistance = 3;
       // }
 
-      p = actualDistance - idealDistance;
-      i += p;
+      prop = actualDistance - idealDistance;
+      i += prop;
       d = (actualDistance - prevActualDistance) - (prevIdealDistance - idealDistance);
 
       prevActualDistance = actualDistance;
       prevIdealDistance = idealDistance;
 
-      throttle = Kp * p + Ki * i + Kd * d;
+      throttle = Kp * prop + Ki * i + Kd * d;
     } else {
 
       actualDistance = vehicle_data[1];
@@ -317,14 +386,13 @@ void PID_update() {
       // else if (vehicle_leading_data[1] < -4) {
       //   idealDistance = computeIdealDistanceACC(vehicle_data[0]);
       // }
-      
 
       if (idealDistance < 5) {
         idealDistance = 5;
       }
 
-      p = actualDistance - idealDistance;
-      i += p;
+      prop = actualDistance - idealDistance;
+      i += prop;
       d = (actualDistance - prevActualDistance) - (prevIdealDistance - idealDistance);
 
       prevActualDistance = actualDistance;
@@ -333,30 +401,30 @@ void PID_update() {
       //float safe_brake_distance = 3 * (vehicle_data[0] / 6 + 1) * (vehicle_data[0] / 6 + 1) + 5;
 
       // if (vehicle_leading_data[1] > 0) {
-      //   throttle = vehicle_ahead_data[1] + 0.1 * p + 0.000001 * i +  1 * d;
+      //   throttle = vehicle_ahead_data[1] + 0.1 * prop + 0.000001 * i +  1 * d;
       // }
       // else {
       //   throttle = vehicle_leading_data[1];
       // }
 
-      if (p < 0) {
+      if (prop < 0) {
         i = 0;
       }
-      //throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
+      //throttle = vehicle_ahead_data[1] + 0.05 * prop + 0.000001 * i + 1 * d;
       if (vehicle_leading_data[1] > 0) {
-        throttle = vehicle_ahead_data[1] + 0.05 * p + 0.000001 * i + 1 * d;
+        throttle = vehicle_ahead_data[1] + cacc_kp * prop + 0 * i + 0 * d;
       }
       else {
         //if (vehicle_data[1] < safe_brake_distance) {
         // if (vehicle_data[0] < 5) {
-        //   throttle = Kp * p + Ki * i + Kd * d;
+        //   throttle = Kp * prop + Ki * i + Kd * d;
         // }
         // else {
-          //throttle = -max_brake + Kp * p + Ki * i + Kd * d;
+          //throttle = -max_brake + Kp * prop + Ki * i + Kd * d;
         // }
         //}
         //else {
-        throttle = vehicle_leading_data[1] + 0.05 * p + 0.000001 * i + 2 * d;
+        throttle = vehicle_leading_data[1] + cacc_kp * prop + 0 * i + 0 * d;
         //}
       }
     }
@@ -374,7 +442,7 @@ void PID_update() {
 
 void loop() {
 
-  update_debug_led_state(cacc_connection_flag);
+  //update_debug_led_state(cacc_connection_flag);
 
   if (cacc_connection_time_out_start + cacc_connection_time_out < millis()) {
     cacc_connection_flag = false;
@@ -389,6 +457,7 @@ void loop() {
       float received_vehicle_speed = 0;
       float received_vehicle_throttle = 0;
       if (net_serial.receiveStates(received_id, received_vehicle_speed, received_vehicle_throttle))  {
+        toggle_debug_led();
         if (received_id == vehicle_ahead_id) {
           vehicle_ahead_data[0] = received_vehicle_speed;
           vehicle_ahead_data[1] = received_vehicle_throttle;

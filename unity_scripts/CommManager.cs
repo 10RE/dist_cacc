@@ -17,7 +17,7 @@ public class CommManager : MonoBehaviour
     private float curDist = 0;
     private float curThrottle = 0;
 
-    private float msg = 0;
+    //private float msg = 0;
 
     private float prevTime = 0F;
     private float sendPeriod = 0.05F;
@@ -27,6 +27,11 @@ public class CommManager : MonoBehaviour
     public bool sendClear = false;
 
     public int test_send = 0;
+
+    public float p = 0f;
+    public bool sendP = false;
+    public float i = 0f;
+    public float d = 0f;
 
     // Start is called before the first frame update
     // Start is called before the first frame update
@@ -161,6 +166,11 @@ public class CommManager : MonoBehaviour
             SendClear();
             sendClear = false;
         }
+        if (sendP)
+        {
+            SendP();
+            sendP = false;
+        }
         //Debug.Log(FromFloat2Byte(1.1f));
     }
 
@@ -248,6 +258,24 @@ public class CommManager : MonoBehaviour
         for (int i = 0; i < 8; i++)
         {
             msg[2 + i] = 0;
+        }
+        msg[10] = (byte)'^';
+        Send(msg);
+    }
+
+    public void SendP() {
+        byte[] msg = new byte[11];
+        msg[0] = (byte)'$';
+        msg[1] = (byte)2;
+        //msg += (byte)((test_send) & 0xFF);
+        byte[] float_byte = FromFloat2Byte(p);
+        for (int i = 0; i < 4; i ++)
+        {
+            msg[2 + i] = float_byte[i];
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            msg[6 + i] = 0;
         }
         msg[10] = (byte)'^';
         Send(msg);
