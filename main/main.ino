@@ -39,6 +39,8 @@ float Ki = 0;
 float Kd = 0;
 
 float cacc_kp = 0;
+float cacc_ki = 0;
+float cacc_kd = 0;
 
 #if VEHICLE_ID == 0
   float max_throttle = 1;
@@ -59,7 +61,7 @@ unsigned long send_time_start;
 unsigned long send_period = 50;
 
 unsigned long recv_time_start;
-unsigned long recv_period = 200;
+unsigned long recv_period = 205;
 
 #if USE_NET_SERIAL
   NSerial net_serial(115200);
@@ -194,9 +196,19 @@ void reset_pid() {
   prevIdealDistance = 0;
 }
 
-void set_pid_p(float p_in) {
-  reset_pid();
-  cacc_kp = p_in;
+void set_pid_p(float in) {
+  //reset_pid();
+  cacc_kp = in;
+}
+
+void set_pid_i(float in) {
+  //reset_pid();
+  cacc_ki = in;
+}
+
+void set_pid_p(float in) {
+  //reset_pid();
+  cacc_kd = in;
 }
 
 void UdecodeCommand(char* command) {
@@ -230,6 +242,20 @@ void UdecodeCommand(char* command) {
         d1.c[i] = command[2 + i];
       }
       set_pid_p(d1.f);
+    }
+    else if (command_id == 3) {
+      data_t d1;
+      for (int i = 0; i < 4; i ++) {
+        d1.c[i] = command[2 + i];
+      }
+      set_pid_i(d1.f);
+    }
+    else if (command_id == 4) {
+      data_t d1;
+      for (int i = 0; i < 4; i ++) {
+        d1.c[i] = command[2 + i];
+      }
+      set_pid_d(d1.f);
     }
 
     
@@ -412,7 +438,7 @@ void PID_update() {
       }
       //throttle = vehicle_ahead_data[1] + 0.05 * prop + 0.000001 * i + 1 * d;
       if (vehicle_leading_data[1] > 0) {
-        throttle = vehicle_ahead_data[1] + cacc_kp * prop + 0 * i + 0 * d;
+        throttle = vehicle_ahead_data[1] + cacc_kp * prop + cacc_ki * i + cacc_kd * d;
       }
       else {
         //if (vehicle_data[1] < safe_brake_distance) {
@@ -424,7 +450,7 @@ void PID_update() {
         // }
         //}
         //else {
-        throttle = vehicle_leading_data[1] + cacc_kp * prop + 0 * i + 0 * d;
+        throttle = vehicle_leading_data[1] + cacc_kp * prop + cacc_ki * i + cacc_kd * d;
         //}
       }
     }
