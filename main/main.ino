@@ -1,6 +1,6 @@
 #include "net_serial.h"
 
-#define VEHICLE_ID 1
+#define VEHICLE_ID 2
 
 #define INITIAL_DISTANCE 1
 #define LEADING_THROTTLE 20
@@ -24,7 +24,6 @@
   int vehicle_ahead_id = 1;
 #endif
 
-
 bool led_state = LOW;
 
 float throttle;
@@ -34,22 +33,21 @@ float vehicle_leading_data[2] = { 0, 0 }; // speed, throttle
 float actualDistance, idealDistance;
 float prevActualDistance, prevIdealDistance;
 
-float Kp = 1.5;
+float Kp = 0.8;
 float Ki = 0;
 float Kd = 0;
 
-float cacc_kp = 0;
-float cacc_ki = 0;
+float cacc_kp = ;
+float cacc_ki = 0.00000000001;
 float cacc_kd = 0;
 
 #if VEHICLE_ID == 0
   float max_throttle = 1;
   float max_brake = 6;
-#elif VEHICLE_ID == 1
+#else
   float max_throttle = 1.3;
   float max_brake = 6;
 #endif
-
 
 float prop, i, d;  // proportional, integral, derivative
 
@@ -60,12 +58,20 @@ unsigned long cacc_connection_time_out_start;
 unsigned long send_time_start;
 unsigned long send_period = 50;
 
-unsigned long recv_time_start;
-unsigned long recv_period = 205;
 
+#define NET_BUFF_LEN 32
 #if USE_NET_SERIAL
   NSerial net_serial(115200);
   float vehicle_ahead_data[2] = { 0, 0 }; // speed, throttle
+
+  int net_receive_curr = 0;
+  int net_receive_length = 0;
+  char net_receive_buff[NET_BUFF_LEN];
+
+  unsigned long broadcast_time_start;
+  unsigned long broadcast_period = 100;
+
+  bool waiting_prompt = false;
 #endif
 
 /*
@@ -132,7 +138,6 @@ void UreadCommand() {
       else if (recieve_cursor == 10) {
         recieve_buff[recieve_cursor] = c;
         if (c == '^') {
-          //UsendRecieved();
           UdecodeCommand(&recieve_buff[0]);
         }
         recieve_cursor = 0;
@@ -189,11 +194,11 @@ void UsendRaw() {
 }
 
 void reset_pid() {
-  prop = 0;
+  // prop = 0;
   i = 0;
-  d = 0;
-  prevActualDistance = 0;
-  prevIdealDistance = 0;
+  // d = 0;
+  // prevActualDistance = 0;
+  // prevIdealDistance = 0;
 }
 
 void set_pid_p(float in) {
@@ -206,7 +211,7 @@ void set_pid_i(float in) {
   cacc_ki = in;
 }
 
-void set_pid_p(float in) {
+void set_pid_d(float in) {
   //reset_pid();
   cacc_kd = in;
 }
@@ -405,9 +410,9 @@ void PID_update() {
     } else {
 
       actualDistance = vehicle_data[1];
-      //idealDistance = computeIdealDistanceCACC(vehicle_leading_data[0]);
-      //if (vehicle_leading_data[1] > ) {
-        idealDistance = computeIdealDistanceCACC(vehicle_leading_data[0]);
+      idealDistance = computeIdealDistanceCACC(vehicle_leading_data[0]);
+      // if (vehicle_leading_data[1] > ) {
+      //   idealDistance = computeIdealDistanceCACC(vehicle_leading_data[0]);
       // }
       // else if (vehicle_leading_data[1] < -4) {
       //   idealDistance = computeIdealDistanceACC(vehicle_data[0]);
@@ -424,35 +429,29 @@ void PID_update() {
       prevActualDistance = actualDistance;
       prevIdealDistance = idealDistance;
 
+
+      // if (prop < 0) {
+      //   i = 0;
+      // }
+
+      throttle = vehicle_leading_data[1] + cacc_kp * prop + cacc_ki * i + cacc_kd * d;
       //float safe_brake_distance = 3 * (vehicle_data[0] / 6 + 1) * (vehicle_data[0] / 6 + 1) + 5;
-
+      
       // if (vehicle_leading_data[1] > 0) {
-      //   throttle = vehicle_ahead_data[1] + 0.1 * prop + 0.000001 * i +  1 * d;
+      //   throttle = vehicle_ahead_data[1] + cacc_kp * prop + cacc_ki * i + cacc_kd * d;
+      // } else {
+      //   //if (vehicle_data[1] < safe_brake_distance) {
+      //   // if (vehicle_data[0] < 5) {
+      //   //   throttle = Kp * prop + Ki * i + Kd * d;
+      //   // }
+      //   // else {
+      //     //throttle = -max_brake + Kp * prop + Ki * i + Kd * d;
+      //   // }
+      //   //}
+      //   //else {
+      //   throttle = vehicle_leading_data[1] + cacc_kp * prop + cacc_ki * i + cacc_kd * d;
+      //   //}
       // }
-      // else {
-      //   throttle = vehicle_leading_data[1];
-      // }
-
-      if (prop < 0) {
-        i = 0;
-      }
-      //throttle = vehicle_ahead_data[1] + 0.05 * prop + 0.000001 * i + 1 * d;
-      if (vehicle_leading_data[1] > 0) {
-        throttle = vehicle_ahead_data[1] + cacc_kp * prop + cacc_ki * i + cacc_kd * d;
-      }
-      else {
-        //if (vehicle_data[1] < safe_brake_distance) {
-        // if (vehicle_data[0] < 5) {
-        //   throttle = Kp * prop + Ki * i + Kd * d;
-        // }
-        // else {
-          //throttle = -max_brake + Kp * prop + Ki * i + Kd * d;
-        // }
-        //}
-        //else {
-        throttle = vehicle_leading_data[1] + cacc_kp * prop + cacc_ki * i + cacc_kd * d;
-        //}
-      }
     }
 
 
@@ -467,54 +466,102 @@ void PID_update() {
 }
 
 void loop() {
+  unsigned long current_time = millis();
 
-  //update_debug_led_state(cacc_connection_flag);
-
-  if (cacc_connection_time_out_start + cacc_connection_time_out < millis()) {
+  update_debug_led_state(cacc_connection_flag);
+  if (cacc_connection_time_out_start + cacc_connection_time_out < current_time) {
     cacc_connection_flag = false;
   }
 
+
 #if USE_NET_SERIAL
   if (self_id != 0) {
-    if (recv_time_start + recv_period < millis()) {
-      // send network msg
-      // receive network msg
-      uint8_t received_id = -1;
-      float received_vehicle_speed = 0;
-      float received_vehicle_throttle = 0;
-      if (net_serial.receiveStates(received_id, received_vehicle_speed, received_vehicle_throttle))  {
-        toggle_debug_led();
-        if (received_id == vehicle_ahead_id) {
-          vehicle_ahead_data[0] = received_vehicle_speed;
-          vehicle_ahead_data[1] = received_vehicle_throttle;
-        }
-        if (received_id == 0) {
-          vehicle_leading_data[0] = received_vehicle_speed;
-          vehicle_leading_data[1] = received_vehicle_throttle;
-        }
-        cacc_connection_flag = true;
-        cacc_connection_time_out_start = millis();
-        
+    if (net_serial.mySerial.available()) {
+      char c = net_serial.mySerial.read();
+      
+      if (net_receive_curr == NET_BUFF_LEN) {
+        net_receive_curr = 0;
       }
+      net_receive_buff[net_receive_curr] = c;
+      net_receive_curr++;
+
+      // Two msg type from esp8266:
+      // vehicle info from network:  "+IPD,n:xxxxxx"
+      // prompt for sending command: "OK\r\n>"
+      // do not care about other msg from esp8266
+
+      if (net_receive_length > 0) {
+        if (net_receive_curr == net_receive_length && net_receive_buff[9] == '^') {
+          // decode network msg from other vehicles
+          if (net_receive_buff[0] == vehicle_ahead_id) {
+            vehicle_ahead_data[0] = *(float *)(net_receive_buff+1);
+            vehicle_ahead_data[1] = *(float *)(net_receive_buff+5);
+          }
+          if (net_receive_buff[0] == 0) {
+            vehicle_leading_data[0] = *(float *)(net_receive_buff+1);
+            vehicle_leading_data[1] = *(float *)(net_receive_buff+5);
+          }
+          // toggle_debug_led();
+          // set cacc connection flag
+          cacc_connection_flag = true;
+          cacc_connection_time_out_start = current_time;
+          net_receive_length = 0;
+          net_receive_curr = 0;
+        }
+      } else if (c == ':') {
+        if (atoi(net_receive_buff+4) == 10) {  // "IPD," -> advance 4 bytes
+          net_receive_length = 10;
+        }
+        //net_receive_length = net_receive_length > NET_BUFF_LEN ? 0 : net_receive_length;
+        net_receive_curr = 0;
+      } else if (c == '+') {
+        net_receive_curr = 0;
+        net_receive_length = 0;
+      } else if (waiting_prompt && c == '>') {
+        // waiting for "OK >" after CIPSEND command
+        // send msg
+        net_serial.mySerial.write(self_id);
+        net_serial.mySerial.write((char *)vehicle_data, 4);
+        net_serial.mySerial.write((char *)(&throttle), 4);
+        net_serial.mySerial.write('^');
+        net_serial.mySerial.println();
+        waiting_prompt = false;
+        net_receive_curr = 0;
+      }
+    }
+  }
+  
+  if (self_id == 0) {
+    if (waiting_prompt && net_serial.mySerial.available() && net_serial.mySerial.read() == '>') {
+      // waiting for "OK >" after CIPSEND command
+      // send msg
+      net_serial.mySerial.write(self_id);
+      net_serial.mySerial.write((char *)vehicle_data, 4);
+      net_serial.mySerial.write((char *)(&throttle), 4);
+      net_serial.mySerial.write('^');
+      net_serial.mySerial.println();
+      waiting_prompt = false;
+      net_receive_curr = 0;
+    }
+
+    // initiate broadcast every broadcast_period (50 ms)
+    if (broadcast_time_start + broadcast_period < current_time) {
+      net_serial.mySerial.println("AT+CIPSEND=10");
+      waiting_prompt = true;
+      broadcast_time_start = current_time;
     }
   }
 #endif
 
-  
-  //throttle = vehicle_data[1];
-
-#if USE_NET_SERIAL
-  if (recv_time_start + recv_period < millis()) {
-    net_serial.broadcastStates(self_id, vehicle_data[0], throttle);
-    recv_time_start = millis();
-  }
-#endif
-
+  // read a byte from unity
+  // if command read complete, decode command
   UreadCommand();
 
-  if (send_time_start + send_period < millis()) {
+  // actuate throttle
+  // send_period 50
+  if (send_time_start + send_period < current_time) {
     PID_update();
-    send_time_start = millis();
+    send_time_start = current_time;
     UsendCommand(throttle);
   }
   
